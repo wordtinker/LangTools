@@ -62,9 +62,6 @@ class Watcher(QFileSystemWatcher):
 
 class MainWindow(Ui_MainWindow, QMainWindow):
 
-    lineAdded = pyqtSignal()  # A signal showing that row has been added to
-    # filesTable.
-
     projectIsReady = pyqtSignal()  # A signal showing that analyze is finished
 
     def __init__(self, watcher, storage):
@@ -98,7 +95,6 @@ class MainWindow(Ui_MainWindow, QMainWindow):
         self.languagesBox.activated.connect(self.language_chosen)
         self.projectsBox.currentIndexChanged.connect(self.redraw_files_and_dics)
         self.projectsBox.currentIndexChanged.connect(self.redraw_word_list)
-        self.lineAdded.connect(self.recalculate_total)
         self.filesTable.currentCellChanged.connect(self.redraw_word_list)
         self.watcher.directoryChanged.connect(self.redraw_files_and_dics)
         self.projectIsReady.connect(self.redraw_files_and_dics)
@@ -132,8 +128,8 @@ class MainWindow(Ui_MainWindow, QMainWindow):
 
     def prepare_files_table(self):
         # Clear the widget
-        while self.filesTable.rowCount() > 0:
-            self.filesTable.removeRow(0)
+        self.filesTable.clearContents()
+        self.filesTable.setRowCount(0)
         # Add Total line to filesTable
         self.insert_row_to_files_table("Total", [])
         fnt = QFont()
@@ -142,13 +138,13 @@ class MainWindow(Ui_MainWindow, QMainWindow):
 
     def prepare_dics_table(self):
         # Clear the widget
-        while self.dicsTable.rowCount() > 0:
-            self.dicsTable.removeRow(0)
+        self.dicsTable.clearContents()
+        self.dicsTable.setRowCount(0)
 
     def prepare_words_table(self):
         # Clear the widget
-        while self.wordsTable.rowCount() > 0:
-            self.wordsTable.removeRow(0)
+        self.wordsTable.clearContents()
+        self.wordsTable.setRowCount(0)
 
     def redraw_word_list(self):
         """
@@ -265,6 +261,8 @@ class MainWindow(Ui_MainWindow, QMainWindow):
             logging.info("Draw file from output:" + file)
             self.insert_row_to_files_table(file, [], color=Qt.red)
 
+        self.recalculate_total()
+
         # Drop stats from DB if there is no file for it nor output file
         for dropname in to_drop:
             self.storage.remove_file(dropname, language, project)
@@ -290,7 +288,6 @@ class MainWindow(Ui_MainWindow, QMainWindow):
         self.filesTable.item(row, 0).setBackground(color)
         if stats:
             self.insert_stats(stats)
-        self.lineAdded.emit()
 
     def insert_row_to_dics_table(self, file, typeof, row=0):
         self.dicsTable.insertRow(row)
@@ -493,13 +490,14 @@ class MainWindow(Ui_MainWindow, QMainWindow):
             progress.setValue(new_value)
             QApplication.processEvents()
             if progress.wasCanceled():
-                self.storage.batch_update_words()
-                self.storage.batch_update_stats()
-                self.projectIsReady.emit()  # To ensure that we redraw analyzed
-                # files
-                return
+                break
 
         # Close progress bar
+        old_known, old_maybe = self.storage.get_total_stats(language, project)
+        if not old_known:
+            old_known = 0
+        if not old_maybe:
+            old_maybe = 0
         self.storage.batch_update_words()
         self.storage.batch_update_stats()
         progress.setValue(10000)
@@ -507,6 +505,15 @@ class MainWindow(Ui_MainWindow, QMainWindow):
         self.menuBar.setEnabled(True)
 
         self.projectIsReady.emit()
+
+        new_known, new_maybe = self.storage.get_total_stats(language, project)
+        if not new_known:
+            new_known = 0
+        if not new_maybe:
+            new_maybe = 0
+        QMessageBox.information(
+            self, "Project changed.", "Known words:{0} Maybe words:{1}"
+            .format(new_known - old_known, new_maybe - old_maybe))
 
     def manage_action_triggered(self):
         """

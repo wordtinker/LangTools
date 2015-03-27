@@ -183,6 +183,12 @@ class Storage():
          ORDER BY punknown DESC""", (language, project))
         return db_cursor.fetchall()
 
+    def get_total_stats(self, language, project):
+        db_cursor = self.db_conn.cursor()
+        db_cursor.execute("""SELECT SUM(known), SUM(maybe) FROM Files
+         WHERE lang=? AND project=?""", (language, project))
+        return db_cursor.fetchone()
+
     def remove_file(self, name, language, project):
         db_cursor = self.db_conn.cursor()
         db_cursor.execute("""DELETE FROM Files WHERE
