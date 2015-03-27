@@ -4,9 +4,11 @@ import logging
 
 from ui.langManager import Ui_languagesDialog
 import config
+from baseTableModel import BaseTaBleModel
 
 from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QTableWidgetItem, QDialog, QFileDialog, QMessageBox
+from PyQt5.QtWidgets import QAbstractItemView, QDialog, QFileDialog,\
+    QMessageBox, QHeaderView
 
 
 class LangManager(Ui_languagesDialog, QDialog):
@@ -19,13 +21,19 @@ class LangManager(Ui_languagesDialog, QDialog):
 
         self.storage = storage
 
-        # Load languages as initial state
-        self.initialize()
+        self.langs_model = BaseTaBleModel(["Language", "Folder"])
+        self.languagesTable.setModel(self.langs_model)
+        self.languagesTable.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.languagesTable.horizontalHeader()\
+            .setSectionResizeMode(1, QHeaderView.Stretch)
 
         # Connect signals and slots
         self.removeButton.clicked.connect(self.remove_button_clicked)
         self.addButton.clicked.connect(self.add_button_clicked)
         self.folderButton.clicked.connect(self.folder_button_clicked)
+
+        # Load languages as initial state
+        self.initialize()
 
     def initialize(self):
         """
@@ -33,19 +41,8 @@ class LangManager(Ui_languagesDialog, QDialog):
         :return:
         """
         languages = self.storage.get_languages()
-        for inx, row in enumerate(languages):
-            self.add_lang_row(inx, row)
-
-    def add_lang_row(self, inx, row):
-        """
-        Adds one row to langTable.
-        :param inx:
-        :param row:
-        :return:
-        """
-        self.languagesTable.insertRow(inx)
-        self.languagesTable.setItem(inx, 0, QTableWidgetItem(row[0]))
-        self.languagesTable.setItem(inx, 1, QTableWidgetItem(row[1]))
+        for row in languages:
+            self.langs_model.add_row(*row)
 
     def remove_button_clicked(self):
         """
@@ -53,13 +50,13 @@ class LangManager(Ui_languagesDialog, QDialog):
         :return:
         """
         # Drop the language from DB
-        current_row = self.languagesTable.currentRow()
-
-        if current_row > -1:
-            current_lang = self.languagesTable.item(current_row, 0).text()
+        index = self.languagesTable.selectedIndexes()
+        if index:
+            row = index[0].row()
+            current_lang = self.langs_model.index(row, 0).data()
             self.storage.remove_language(current_lang)
 
-            self.languagesTable.removeRow(current_row)
+            self.langs_model.removeRows(row, 1)
 
             self.langListHasChanged.emit()
 
@@ -76,7 +73,8 @@ class LangManager(Ui_languagesDialog, QDialog):
             # Add new lang to DB, and redraw the list of languages.
             self.storage.add_language(lang, folder)
 
-            self.add_lang_row(0, (lang, folder))
+            self.langs_model.add_row(lang, folder)
+
             self.langEdit.clear()
             self.folderEdit.clear()
 

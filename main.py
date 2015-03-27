@@ -10,11 +10,12 @@ import storage
 import config
 from lang.lexer import Lexer
 import lang.printer as printer
+from baseTableModel import BaseTaBleModel
 
-from PyQt5.QtCore import Qt, pyqtSignal, QFileSystemWatcher, QUrl, QFile
+from PyQt5.QtCore import Qt, pyqtSignal, QFileSystemWatcher, QUrl, QFile, QVariant
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import QApplication, QAbstractItemView,\
-    QMainWindow, QTableWidgetItem, QProgressDialog, QMessageBox, QHeaderView
+    QMainWindow, QProgressDialog, QMessageBox, QHeaderView
 
 
 app_data_path = None
@@ -61,6 +62,75 @@ class Watcher(QFileSystemWatcher):
                 self.addPath(folder)
 
 
+class FilesModel(BaseTaBleModel):
+    headers = ["File", "Size", "Known", "%", "Maybe", "%", "Unknown", "%"]
+
+    def __init__(self):
+        super(FilesModel, self).__init__(self.headers)
+
+    def prepare(self):
+        super(FilesModel, self).prepare()
+        # Add Total line to filesTable
+        row = self.add_row("Total", 0, 0, 0.0, 0, 0.0, 0, 0.0)
+
+    def data(self, index, role=None):
+        if not index.isValid():
+            return QVariant()
+
+        # Make total row bold
+        elif role == Qt.FontRole and index.row() == self.rowCount() - 1:
+            font = QFont()
+            font.setBold(True)
+            return QVariant(font)
+
+        elif role != Qt.DisplayRole:
+            return QVariant()
+
+        data = self.items[index.row()][index.column()]
+        if data and index.column() in [3, 5, 7]:
+            data = "{0:.2f}".format(data)
+        return QVariant(data)
+
+    def recalculate_total(self):
+        """
+        Recalculates the total stats for project and puts them into Total line.
+        """
+        last_row = self.rowCount() - 1
+
+        size = 0
+        known = 0
+        pknown = 0
+        maybe = 0
+        pmaybe = 0
+        unknown = 0
+        punknown = 0
+
+        fnt = QFont()
+        fnt.setBold(True)
+
+        for i in range(last_row):
+            file_size = self.items[i][1]
+            if file_size:
+                size += file_size
+            file_known = self.items[i][2]
+            if file_known:
+                known += file_known
+            file_maybe = self.items[i][4]
+            if file_maybe:
+                maybe += file_maybe
+            file_unknown = self.items[i][6]
+            if file_unknown:
+                unknown += file_unknown
+
+        if size != 0:
+            pknown = known / size
+            pmaybe = maybe / size
+            punknown = unknown / size
+
+        self.update_row(last_row, self.items[last_row][0], size, known, pknown,
+                        maybe, pmaybe, unknown, punknown)
+
+
 class MainWindow(Ui_MainWindow, QMainWindow):
 
     projectIsReady = pyqtSignal()  # A signal showing that analyze is finished
@@ -71,17 +141,22 @@ class MainWindow(Ui_MainWindow, QMainWindow):
         self.setupUi(self)
 
         # Fixing some UI elements
+        self.dics_model = BaseTaBleModel(["File", "Type"])
+        self.dicsTable.setModel(self.dics_model)
         self.dicsTable.horizontalHeader()\
             .setSectionResizeMode(0, QHeaderView.Stretch)
-        self.dicsTable.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.dicsTable.setSelectionMode(QAbstractItemView.SingleSelection)
 
+        self.words_model = BaseTaBleModel(["Word", "Quantity"])
+        self.wordsTable.setModel(self.words_model)
         self.wordsTable.horizontalHeader()\
             .setSectionResizeMode(0, QHeaderView.Stretch)
-        self.wordsTable.setEditTriggers(QAbstractItemView.NoEditTriggers)
 
+        self.files_model = FilesModel()
+        self.filesTable.setModel(self.files_model)
+        self.filesTable.setSelectionMode(QAbstractItemView.SingleSelection)
         self.filesTable.horizontalHeader()\
             .setSectionResizeMode(0, QHeaderView.ResizeToContents)
-        self.filesTable.setEditTriggers(QAbstractItemView.NoEditTriggers)
         for header in range(1, self.filesTable.horizontalHeader().count()):
             self.filesTable.horizontalHeader()\
                 .setSectionResizeMode(header, QHeaderView.Stretch)
@@ -98,7 +173,7 @@ class MainWindow(Ui_MainWindow, QMainWindow):
         self.projectsBox.currentIndexChanged.connect(self.redraw_files)
         self.projectsBox.currentIndexChanged.connect(self.redraw_dics)
         self.projectsBox.currentIndexChanged.connect(self.redraw_word_list)
-        self.filesTable.currentCellChanged.connect(self.redraw_word_list)
+        self.filesTable.selectionModel().selectionChanged.connect(self.redraw_word_list)
         self.watcher.directoryChanged.connect(self.redraw_files)
         self.dic_watcher.directoryChanged.connect(self.redraw_dics)
         self.projectIsReady.connect(self.redraw_files)
@@ -130,32 +205,12 @@ class MainWindow(Ui_MainWindow, QMainWindow):
             self.langs[lang] = folder
             self.languagesBox.addItem(lang)
 
-    def prepare_files_table(self):
-        # Clear the widget
-        self.filesTable.clearContents()
-        self.filesTable.setRowCount(0)
-        # Add Total line to filesTable
-        self.insert_row_to_files_table("Total", [])
-        fnt = QFont()
-        fnt.setBold(True)
-        self.filesTable.item(0, 0).setFont(fnt)
-
-    def prepare_dics_table(self):
-        # Clear the widget
-        self.dicsTable.clearContents()
-        self.dicsTable.setRowCount(0)
-
-    def prepare_words_table(self):
-        # Clear the widget
-        self.wordsTable.clearContents()
-        self.wordsTable.setRowCount(0)
-
     def redraw_word_list(self):
         """
         Redraws list of words for chosen project or chosen file
         :return:
         """
-        self.prepare_words_table()
+        self.words_model.prepare()
         # Get project and output dirs
         project = self.projectsBox.currentText()
         language = self.languagesBox.currentText()
@@ -164,24 +219,25 @@ class MainWindow(Ui_MainWindow, QMainWindow):
         if not(project and language):
             return
 
-        row = self.filesTable.currentRow()
-        if row == -1 or row == self.filesTable.rowCount() - 1:
+        index = self.filesTable.selectedIndexes()
+        if index and index[0].row() != self.files_model.rowCount() - 1:
+            # Get words for one file
+            file_name = self.files_model.index(index[0].row(), 0).data()
+            records = self.storage.get_unknown_words_for_file(
+                        language, project, file_name)
+        else:
             # Get words for whole project
             records = self.storage.get_unknown_words(language, project)
-        else:
-            # Get words for one file
-            file_name = self.filesTable.item(row, 0).text()
-            records = self.storage.get_unknown_words_for_file(
-                language, project, file_name)
+
         for record in reversed(records):
-            self.insert_row_to_words_table(record[0], record[1])
+            self.words_model.add_row(record[0], record[1])
 
     def redraw_dics(self):
         """
         Redraws list of dictionaries used in project.
         :return:
         """
-        self.prepare_dics_table()
+        self.dics_model.prepare()
         # Get project and output dirs
         project = self.projectsBox.currentText()
         language = self.languagesBox.currentText()
@@ -206,17 +262,18 @@ class MainWindow(Ui_MainWindow, QMainWindow):
 
         for file in dictionaries:
             logging.info("Draw dic file:" + file)
-            self.insert_row_to_dics_table(file, project)
+            self.dics_model.add_row(file, project)
 
         for file in gen_dictionaries:
-            self.insert_row_to_dics_table(file, "General")
             logging.info("Draw dic file:" + file)
+            self.dics_model.add_row(file, "General")
 
     def redraw_files(self):
         """
         Redraws list of files for chosen project.
         """
-        self.prepare_files_table()
+        # Clear the widget
+        self.files_model.prepare()
 
         # Get project and output dirs
         project = self.projectsBox.currentText()
@@ -255,14 +312,14 @@ class MainWindow(Ui_MainWindow, QMainWindow):
             in_output = file in cleared_outputs
 
             if in_files and in_output:
-                self.insert_row_to_files_table(file, stats, color=Qt.green)
+                self.files_model.add_row(*record)
                 files.remove(file)
                 cleared_outputs.remove(file)
             elif in_files:
-                self.insert_row_to_files_table(file, stats, color=Qt.gray)
+                self.files_model.add_row(*record)
                 files.remove(file)
             elif in_output:
-                self.insert_row_to_files_table(file, stats, color=Qt.red)
+                self.files_model.add_row(*record)
                 cleared_outputs.remove(file)
             else:
                 to_drop.append(file)
@@ -271,52 +328,20 @@ class MainWindow(Ui_MainWindow, QMainWindow):
             logging.info("Draw file from dir:" + file)
             in_output = file in cleared_outputs
             if in_output:
-                self.insert_row_to_files_table(file, [], color=Qt.green)
+                self.files_model.add_row(file)
                 cleared_outputs.remove(file)
             else:
-                self.insert_row_to_files_table(file, [], color=Qt.gray)
+                self.files_model.add_row(file)
 
         for file in cleared_outputs:
             logging.info("Draw file from output:" + file)
-            self.insert_row_to_files_table(file, [], color=Qt.red)
+            self.files_model.add_row(file)
 
-        self.recalculate_total()
+        self.files_model.recalculate_total()
 
         # Drop stats from DB if there is no file for it nor output file
         for dropname in to_drop:
             self.storage.remove_file(dropname, language, project)
-
-    def insert_stats(self, stats, row=0, fnt=None):
-        self.filesTable.setItem(row, 1, QTableWidgetItem(str(stats[0])))
-        self.filesTable.setItem(row, 2, QTableWidgetItem(str(stats[1])))
-        self.filesTable.setItem(
-            row, 3, QTableWidgetItem("{0:.2f}".format(stats[2])))
-        self.filesTable.setItem(row, 4, QTableWidgetItem(str(stats[3])))
-        self.filesTable.setItem(
-            row, 5, QTableWidgetItem("{0:.2f}".format(stats[4])))
-        self.filesTable.setItem(row, 6, QTableWidgetItem(str(stats[5])))
-        self.filesTable.setItem(
-            row, 7, QTableWidgetItem("{0:.2f}".format(stats[6])))
-        if fnt:
-            for i in range(1, 8):
-                self.filesTable.item(row, i).setFont(fnt)
-
-    def insert_row_to_files_table(self, file, stats, row=0, color=Qt.white):
-        self.filesTable.insertRow(row)
-        self.filesTable.setItem(row, 0, QTableWidgetItem(file))
-        self.filesTable.item(row, 0).setBackground(color)
-        if stats:
-            self.insert_stats(stats)
-
-    def insert_row_to_dics_table(self, file, typeof, row=0):
-        self.dicsTable.insertRow(row)
-        self.dicsTable.setItem(row, 0, QTableWidgetItem(file))
-        self.dicsTable.setItem(row, 1, QTableWidgetItem(typeof))
-
-    def insert_row_to_words_table(self, word, quantity, row=0):
-        self.wordsTable.insertRow(row)
-        self.wordsTable.setItem(row, 0, QTableWidgetItem(word))
-        self.wordsTable.setItem(row, 1, QTableWidgetItem(str(quantity)))
 
     def language_chosen(self):
         """
@@ -557,54 +582,12 @@ class MainWindow(Ui_MainWindow, QMainWindow):
         self.langs = {}
         self.load_initial_values()
 
-    def files_table_item_value(self, row, col):
-        """
-        Little helper function that returns the value of cell or Zero
-        """
-        item = self.filesTable.item(row, col)
-        if item is not None:
-            return int(item.text())
-        return 0
-
-    def recalculate_total(self):
-        """
-        Recalculates the total stats for project and puts them into Total line.
-        :return:
-        """
-        last_row = self.filesTable.rowCount() - 1
-
-        size = 0
-        known = 0
-        pknown = 0
-        maybe = 0
-        pmaybe = 0
-        unknown = 0
-        punknown = 0
-
-        fnt = QFont()
-        fnt.setBold(True)
-
-        for i in range(last_row):
-            size += self.files_table_item_value(i, 1)
-            known += self.files_table_item_value(i, 2)
-            maybe += self.files_table_item_value(i, 4)
-            unknown += self.files_table_item_value(i, 6)
-
-        if size != 0:
-            pknown = known/size
-            pmaybe = maybe/size
-            punknown = unknown/size
-
-        self.insert_stats(
-            [size, known, pknown, maybe, pmaybe, unknown, punknown],
-            last_row, fnt)
-
     def deal_file(self, func):
-        row = self.filesTable.currentRow()
-        if row != -1 and row != self.filesTable.rowCount() - 1:
-            background = self.filesTable.item(row, 0).background()
-            if background != Qt.red:
-                file_name = self.filesTable.item(row, 0).text()
+        index = self.filesTable.selectedIndexes()
+        if index:
+            row = index[0].row()
+            if row != -1 and row != self.files_model.rowCount() - 1:
+                file_name = self.files_model.index(row, 0).data()
                 func(config.corpus_dir, file_name)
 
     def open_file(self):
@@ -614,11 +597,11 @@ class MainWindow(Ui_MainWindow, QMainWindow):
         self.deal_file(self.delete_resource)
 
     def deal_output(self, func):
-        row = self.filesTable.currentRow()
-        if row != -1 and row != self.filesTable.rowCount() - 1:
-            background = self.filesTable.item(row, 0).background()
-            if background in [Qt.green, Qt.red]:
-                file_name = self.filesTable.item(row, 0).text()
+        index = self.filesTable.selectedIndexes()
+        if index:
+            row = index[0].row()
+            if row != -1 and row != self.files_model.rowCount() - 1:
+                file_name = self.files_model.index(row, 0).data()
                 (root, ext) = os.path.splitext(file_name)
                 file_name = root + config.input[ext]
                 func(config.output_dir, file_name)
@@ -630,10 +613,11 @@ class MainWindow(Ui_MainWindow, QMainWindow):
         self.deal_output(self.delete_resource)
 
     def deal_dic(self, func):
-        row = self.dicsTable.currentRow()
-        if row != -1:
-            file_name = self.dicsTable.item(row, 0).text()
-            dic_type = self.dicsTable.item(row, 1).text()
+        index = self.dicsTable.selectedIndexes()
+        if index:
+            row = index[0].row()
+            file_name = self.dics_model.index(row, 0).data()
+            dic_type = self.dics_model.index(row, 1).data()
             if dic_type == "General":
                 func(config.dic_dir, file_name, gen=True)
             else:
@@ -650,24 +634,34 @@ class MainWindow(Ui_MainWindow, QMainWindow):
         language = self.languagesBox.currentText()
         folder = self.langs[language]
         if not gen:
-            url = QUrl.fromLocalFile(
-                os.path.join(folder, subfolder, project, file_name))
+            path = os.path.join(folder, subfolder, project, file_name)
         else:
-            url = QUrl.fromLocalFile(
-                os.path.join(folder, subfolder, file_name))
-        logging.info("Opening resource:" + url.toString())
-        QDesktopServices.openUrl(url)
+            path = os.path.join(folder, subfolder, file_name)
+        logging.info("Opening resource:" + path)
+        if os.path.exists(path):
+            url = QUrl.fromLocalFile(path)
+            QDesktopServices.openUrl(url)
+        else:
+            msg_box = QMessageBox()
+            msg_box.setText("Can't open file.")
+            msg_box.exec_()
 
     def delete_resource(self, subfolder, file_name, gen=False):
         project = self.projectsBox.currentText()
         language = self.languagesBox.currentText()
         folder = self.langs[language]
         if not gen:
-            file = QFile(os.path.join(folder, subfolder, project, file_name))
+            path = os.path.join(folder, subfolder, project, file_name)
         else:
-            file = QFile(os.path.join(folder, subfolder, file_name))
-        logging.info("Removing resource:" + file.fileName())
-        file.remove()
+            path = os.path.join(folder, subfolder, file_name)
+        logging.info("Removing resource:" + path)
+        if os.path.exists(path):
+            file = QFile(path)
+            file.remove()
+        else:
+            msg_box = QMessageBox()
+            msg_box.setText("Can't delete file.")
+            msg_box.exec_()
 
     def show_about(self):
         QMessageBox.information(
@@ -684,6 +678,7 @@ if __name__ == '__main__':
         filename=log_name,
         format='%(asctime)s %(message)s',
         level=logging.ERROR)
+        # level=logging.INFO)
 
     logging.info("app_data_path:" + app_data_path)
 

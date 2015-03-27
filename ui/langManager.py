@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'languages.ui'
 #
-# Created: Sat Dec 13 22:40:27 2014
+# Created: Thu Jan  8 17:04:26 2015
 #      by: PyQt5 UI code generator 5.3.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -20,17 +20,6 @@ class Ui_languagesDialog(object):
         languagesDialog.setSizePolicy(sizePolicy)
         languagesDialog.setMinimumSize(QtCore.QSize(421, 400))
         languagesDialog.setMaximumSize(QtCore.QSize(421, 400))
-        self.languagesTable = QtWidgets.QTableWidget(languagesDialog)
-        self.languagesTable.setGeometry(QtCore.QRect(10, 30, 401, 251))
-        self.languagesTable.setObjectName("languagesTable")
-        self.languagesTable.setColumnCount(2)
-        self.languagesTable.setRowCount(0)
-        item = QtWidgets.QTableWidgetItem()
-        self.languagesTable.setHorizontalHeaderItem(0, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.languagesTable.setHorizontalHeaderItem(1, item)
-        self.languagesTable.horizontalHeader().setStretchLastSection(True)
-        self.languagesTable.verticalHeader().setVisible(False)
         self.folderButton = QtWidgets.QPushButton(languagesDialog)
         self.folderButton.setGeometry(QtCore.QRect(370, 330, 21, 27))
         self.folderButton.setObjectName("folderButton")
@@ -73,19 +62,17 @@ class Ui_languagesDialog(object):
         self.horizontalLayout_5.addWidget(self.label_2)
         spacerItem3 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout_5.addItem(spacerItem3)
+        self.languagesTable = QtWidgets.QTableView(languagesDialog)
+        self.languagesTable.setGeometry(QtCore.QRect(10, 21, 401, 271))
+        self.languagesTable.setObjectName("languagesTable")
 
         self.retranslateUi(languagesDialog)
         QtCore.QMetaObject.connectSlotsByName(languagesDialog)
         languagesDialog.setTabOrder(self.removeButton, self.addButton)
-        languagesDialog.setTabOrder(self.addButton, self.languagesTable)
 
     def retranslateUi(self, languagesDialog):
         _translate = QtCore.QCoreApplication.translate
         languagesDialog.setWindowTitle(_translate("languagesDialog", "Languages"))
-        item = self.languagesTable.horizontalHeaderItem(0)
-        item.setText(_translate("languagesDialog", "Language"))
-        item = self.languagesTable.horizontalHeaderItem(1)
-        item.setText(_translate("languagesDialog", "Folder"))
         self.folderButton.setText(_translate("languagesDialog", "..."))
         self.addButton.setText(_translate("languagesDialog", "Add Language"))
         self.removeButton.setText(_translate("languagesDialog", "Remove Language"))
