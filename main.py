@@ -132,6 +132,21 @@ class FilesModel(BaseTaBleModel):
                         maybe, pmaybe, unknown, punknown)
 
 
+class SortingWithTotal(QSortFilterProxyModel):
+
+    def __init__(self):
+        super(SortingWithTotal, self).__init__()
+
+    def lessThan(self, index_1, index_2):
+        last_row = self.sourceModel().rowCount() - 1
+        if index_1.row() == last_row:
+            return False
+        elif index_2.row() == last_row:
+            return True
+        else:
+            return super(SortingWithTotal, self).lessThan(index_1, index_2)
+
+
 class MainWindow(Ui_MainWindow, QMainWindow):
 
     projectIsReady = pyqtSignal()  # A signal showing that analyze is finished
@@ -157,7 +172,7 @@ class MainWindow(Ui_MainWindow, QMainWindow):
             .setSectionResizeMode(0, QHeaderView.Stretch)
 
         self.files_model = FilesModel()
-        self.files_proxy = QSortFilterProxyModel()
+        self.files_proxy = SortingWithTotal()
         self.files_proxy.setSourceModel(self.files_model)
         self.filesTable.setModel(self.files_proxy)
         self.filesTable.setSortingEnabled(True)
@@ -238,6 +253,8 @@ class MainWindow(Ui_MainWindow, QMainWindow):
 
         for record in reversed(records):
             self.words_model.add_row(record[0], record[1])
+
+        self.wordsTable.sortByColumn(1, Qt.DescendingOrder)
 
     def redraw_dics(self):
         """
@@ -345,6 +362,8 @@ class MainWindow(Ui_MainWindow, QMainWindow):
             self.files_model.add_row(file)
 
         self.files_model.recalculate_total()
+
+        self.filesTable.sortByColumn(7, Qt.AscendingOrder)
 
         # Drop stats from DB if there is no file for it nor output file
         for dropname in to_drop:
@@ -481,6 +500,11 @@ class MainWindow(Ui_MainWindow, QMainWindow):
             except Exception as e:
                 logging.exception(e)
                 pass
+
+        # Test flatten dictionary feature
+        # with open('flat_dic.txt', 'w') as flat_dic:
+        #     for word in  sorted(lexer.dic.keys()):
+        #         flat_dic.write('{}\n'.format(word))
 
         # Update progressbar
         progress.setValue(2000)
