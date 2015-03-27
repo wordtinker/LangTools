@@ -207,13 +207,25 @@ class MainWindow(Ui_MainWindow, QMainWindow):
 
         self.runProject.clicked.connect(self.run_project_clicked)
 
-        self.openFile.clicked.connect(self.open_file)
-        self.openUotput.clicked.connect(self.open_output)
-        self.openDic.clicked.connect(self.open_dic)
+        self.openFile.clicked.connect(
+            self.action_btn_clicked(self.deal_file, self.open_resource)
+        )
+        self.openUotput.clicked.connect(
+            self.action_btn_clicked(self.deal_output, self.open_resource)
+        )
+        self.openDic.clicked.connect(
+            self.action_btn_clicked(self.deal_dic, self.open_resource)
+        )
 
-        self.dropFile.clicked.connect(self.delete_file)
-        self.dropOutput.clicked.connect(self.delete_output)
-        self.dropDic.clicked.connect(self.delete_dic)
+        self.dropFile.clicked.connect(
+            self.action_btn_clicked(self.deal_file, self.delete_resource)
+        )
+        self.dropOutput.clicked.connect(
+            self.action_btn_clicked(self.deal_output, self.delete_resource)
+        )
+        self.dropDic.clicked.connect(
+            self.action_btn_clicked(self.deal_dic, self.delete_resource)
+        )
 
         # Load initial values
         self.load_initial_values()
@@ -244,7 +256,7 @@ class MainWindow(Ui_MainWindow, QMainWindow):
         index = self.filesTable.selectedIndexes()
         if index and index[0].row() != self.files_model.rowCount() - 1:
             # Get words for one file
-            file_name = self.files_model.index(index[0].row(), 0).data()
+            file_name = self.files_proxy.index(index[0].row(), 0).data()
             records = self.storage.get_unknown_words_for_file(
                         language, project, file_name)
         else:
@@ -613,61 +625,53 @@ class MainWindow(Ui_MainWindow, QMainWindow):
         self.langs = {}
         self.load_initial_values()
 
-    def deal_file(self, func):
+    def action_btn_clicked(self, deal_func, action):
+
+        def func(_self):
+            dir_name, project, file_name = deal_func()
+
+            if file_name:
+                language = self.languagesBox.currentText()
+                folder = self.langs[language]
+
+                path = os.path.join(folder, dir_name, project, file_name)
+                action(path)
+
+        return func
+
+    def deal_file(self):
         index = self.filesTable.selectedIndexes()
         if index:
             row = index[0].row()
-            if row != -1 and row != self.files_model.rowCount() - 1:
-                file_name = self.files_model.index(row, 0).data()
-                func(config.corpus_dir, file_name)
+            if row != self.files_model.rowCount() - 1:
+                file_name = self.files_proxy.index(row, 0).data()
+                return config.corpus_dir, self.projectsBox.currentText(), file_name
+        return None, None, None
 
-    def open_file(self):
-        self.deal_file(self.open_resource)
-
-    def delete_file(self):
-        self.deal_file(self.delete_resource)
-
-    def deal_output(self, func):
+    def deal_output(self):
         index = self.filesTable.selectedIndexes()
         if index:
             row = index[0].row()
-            if row != -1 and row != self.files_model.rowCount() - 1:
-                file_name = self.files_model.index(row, 0).data()
+            if row != self.files_model.rowCount() - 1:
+                file_name = self.files_proxy.index(row, 0).data()
                 (root, ext) = os.path.splitext(file_name)
                 file_name = root + config.input[ext]
-                func(config.output_dir, file_name)
+                return config.output_dir, self.projectsBox.currentText(), file_name
+        return None, None, None
 
-    def open_output(self):
-        self.deal_output(self.open_resource)
-
-    def delete_output(self):
-        self.deal_output(self.delete_resource)
-
-    def deal_dic(self, func):
+    def deal_dic(self):
         index = self.dicsTable.selectedIndexes()
         if index:
             row = index[0].row()
             file_name = self.dics_model.index(row, 0).data()
             dic_type = self.dics_model.index(row, 1).data()
             if dic_type == "General":
-                func(config.dic_dir, file_name, gen=True)
+                return config.dic_dir, '', file_name
             else:
-                func(config.dic_dir, file_name)
+                return config.dic_dir, self.projectsBox.currentText(), file_name
+        return None, None, None
 
-    def open_dic(self):
-        self.deal_dic(self.open_resource)
-
-    def delete_dic(self):
-        self.deal_dic(self.delete_resource)
-
-    def open_resource(self, subfolder, file_name, gen=False):
-        project = self.projectsBox.currentText()
-        language = self.languagesBox.currentText()
-        folder = self.langs[language]
-        if not gen:
-            path = os.path.join(folder, subfolder, project, file_name)
-        else:
-            path = os.path.join(folder, subfolder, file_name)
+    def open_resource(self, path):
         logging.info("Opening resource:" + path)
         if os.path.exists(path):
             url = QUrl.fromLocalFile(path)
@@ -677,14 +681,7 @@ class MainWindow(Ui_MainWindow, QMainWindow):
             msg_box.setText("Can't open file.")
             msg_box.exec_()
 
-    def delete_resource(self, subfolder, file_name, gen=False):
-        project = self.projectsBox.currentText()
-        language = self.languagesBox.currentText()
-        folder = self.langs[language]
-        if not gen:
-            path = os.path.join(folder, subfolder, project, file_name)
-        else:
-            path = os.path.join(folder, subfolder, file_name)
+    def delete_resource(self, path):
         logging.info("Removing resource:" + path)
         if os.path.exists(path):
             file = QFile(path)

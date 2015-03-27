@@ -44,6 +44,8 @@ def print_page(name, lexi_text):
                     with tag('p'):
                         doc.asis(line)
             with tag('style'):
+                text('body {font-family:sans-serif; \
+                     line-height: 1.5;}')
                 text('mark.known \
                      {background-color: white; \
                      font-weight: normal;font-style: normal; \

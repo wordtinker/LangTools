@@ -15,14 +15,10 @@ class Tokenizer:
         self.length = len(self.string)
         self.word = regex.compile(
             r"""(
-            (\p{L}+  # any character of: UTF macro 'Letter' 1 or more times
-            '*       # \' symbol 0 or more times
-            \p{L}*)  # any character of: UTF macro 'Letter' 0 or more times
-            |        # or
-            (\p{L}+  # any character of: UTF macro 'Letter' 1 or more times
-            "+       # \" symbol 1 or more times
-            \p{L}+)  # any character of: UTF macro 'Letter' 1 or more times
-
+            \p{L}+   # any character of: UTF macro 'Letter' 1 or more times
+            ([״'׳"]      # \' or ׳(0x5f3) symbol exactly once
+            \p{L}+   # any character of: UTF macro 'Letter' 1 or more times
+            )?       # optionally
             )""", regex.VERBOSE)
         return self
 
