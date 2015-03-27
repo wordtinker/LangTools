@@ -23,13 +23,33 @@ class Storage():
         word TEXT, lang TEXT, project TEXT, file TEXT, quantity INTEGER)""")
         self.db_conn.commit()
 
+        self.words = []
+        self.new_words = []
+        self.to_insert = []
+        self.to_update = []
+
     def add_language(self, lang, folder):
         db_cursor = self.db_conn.cursor()
         db_cursor.execute('''INSERT INTO Languages
          VALUES (?, ?)''', (lang, folder))
         self.db_conn.commit()
 
-    def update_stat(self, language, project, file, text_size,
+    def batch_update_stats(self):
+        db_cursor = self.db_conn.cursor()
+        db_cursor.executemany('''INSERT INTO Files
+            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                              self.to_insert)
+        self.db_conn.commit()
+        self.to_insert = []
+
+        db_cursor.executemany('''UPDATE Files
+            SET size=?, known=?, pknown=?, maybe=?, pmaybe=?, unknown=?,
+            punknown=?
+            WHERE rowid =?''', self.to_update)
+        self.db_conn.commit()
+        self.to_update = []
+
+    def update_stat(self, rowid, language, project, file, text_size,
                     known, maybe):
         pknown = 0.0
         pmaybe = 0.0
@@ -40,40 +60,35 @@ class Storage():
             pmaybe = maybe / text_size
             punknown = unknown / text_size
 
-        record = (text_size, known, pknown, maybe, pmaybe, unknown,
-                  punknown, language, project, file)
-
-        db_cursor = self.db_conn.cursor()
-        result = db_cursor.execute('''UPDATE Files
-        SET size=?, known=?, pknown=?, maybe=?, pmaybe=?, unknown=?,
-        punknown=?
-        WHERE lang=? AND project=? AND name=?''', record)
-        self.db_conn.commit()
-
-        if result.rowcount == 0:  # No row was found for update
-            db_cursor = self.db_conn.cursor()
-            db_cursor.execute('''INSERT INTO Files
-            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                              (file, language, project, text_size, known,
+        if rowid == 0:  # Create new stats row
+            self.to_insert.append((file, language, project, text_size, known,
                                pknown, maybe, pmaybe, unknown, punknown))
-            self.db_conn.commit()
+        else:  # We have a valid rowid
+            self.to_update.append((text_size, known, pknown, maybe, pmaybe,
+                                   unknown, punknown, rowid))
 
-    def update_words(self, language, project, file, dic_unknown):
+    def batch_update_words(self):
         # Clear old unknown words data
         db_cursor = self.db_conn.cursor()
-        db_cursor.execute('''DELETE FROM Words
-        WHERE lang=? AND project=? AND file=?''',
-                          (language, project, file))
+        db_cursor.executemany('''DELETE FROM Words
+        WHERE lang=? AND project=? AND file=?''', self.words)
         self.db_conn.commit()
+        self.words = []
 
         # Set new data
+        db_cursor.executemany('''INSERT INTO Words
+        VALUES(?, ?, ?, ?, ?)''', self.new_words)
+        self.db_conn.commit()
+        self.new_words = []
+
+    def update_words(self, language, project, file, dic_unknown):
+        # Save data that should be deleted in memory
+        self.words.append((language, project, file))
+
+        # Save new data in memory
         records = [(word, language, project, file, quantity)
                    for word, quantity in dic_unknown.items()]
-
-        db_cursor = self.db_conn.cursor()
-        db_cursor.executemany('''INSERT INTO Words
-        VALUES(?, ?, ?, ?, ?)''', records)
-        self.db_conn.commit()
+        self.new_words += records
 
     def language_exists(self, lang):
         db_cursor = self.db_conn.cursor()
@@ -95,13 +110,17 @@ class Storage():
 
     def stat_changed(self, language, project, name, size, known, maybe):
         db_cursor = self.db_conn.cursor()
-        db_cursor.execute("""SELECT size, known, maybe FROM Files WHERE
+        db_cursor.execute("""SELECT rowid, size, known, maybe FROM Files WHERE
          lang=? AND project=? AND name=?""", (language, project, name))
         result = db_cursor.fetchone()
-        if result and result == (size, known, maybe):
-            return False
-
-        return True
+        if result:
+            rowid, *stats = result
+            if stats == [size, known, maybe]:
+                return -1  # Stats unchanged
+            else:
+                return rowid  # Stats changed
+        else:
+            return 0  # No record has been found
 
     def get_languages(self):
         """

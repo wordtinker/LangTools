@@ -1,5 +1,5 @@
 appname = "LangTools"
-appversion = "0.8.12"
+appversion = "0.8.13"
 dbname = "lt.db"
 log = "lt.log"
 

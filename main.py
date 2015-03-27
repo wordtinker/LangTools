@@ -45,11 +45,14 @@ class Watcher(QFileSystemWatcher):
     def __init__(self):
         super(Watcher, self).__init__()
 
-    def set_dirs(self, dirs):
-        old_dirs = self.directories()
+    def halt(self):
+        old_folders = self.directories()
         # Unset directories
-        if old_dirs:
-            self.removePaths(self.directories())
+        if old_folders:
+            self.removePaths(old_folders)
+
+    def set_dirs(self, dirs):
+        self.halt()
         # Set new directories
         for folder in dirs:
             logging.info("FileWatcher dirs:" + folder)
@@ -448,6 +451,8 @@ class MainWindow(Ui_MainWindow, QMainWindow):
 
         # Analyze project files
         step = 7000/len(files)
+        self.watcher.halt()  # Stop watching for directories, so the generated
+        # outputs wont be redrawn immediately. Emit signal afterward.
         for file in files:
             file_path = os.path.join(project_dir, file)
             logging.info("Analyze the file:" + file_path)
@@ -461,9 +466,11 @@ class MainWindow(Ui_MainWindow, QMainWindow):
                 pass
 
             if text_size is not None:  # Analysis was sucessful
-                if self.storage.stat_changed(
-                        language, project, file, text_size, known, maybe):
-                    self.storage.update_stat(
+                rowid = self.storage.stat_changed(
+                        language, project, file, text_size, known, maybe)
+
+                if rowid != -1:
+                    self.storage.update_stat(rowid,
                         language, project, file, text_size, known, maybe)
                     self.storage.update_words(
                         language, project, file, dic_unknown)
@@ -486,11 +493,15 @@ class MainWindow(Ui_MainWindow, QMainWindow):
             progress.setValue(new_value)
             QApplication.processEvents()
             if progress.wasCanceled():
+                self.storage.batch_update_words()
+                self.storage.batch_update_stats()
                 self.projectIsReady.emit()  # To ensure that we redraw analyzed
                 # files
                 return
 
         # Close progress bar
+        self.storage.batch_update_words()
+        self.storage.batch_update_stats()
         progress.setValue(10000)
         progress.close()
         self.menuBar.setEnabled(True)
