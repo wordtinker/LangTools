@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import sys
 import os
 import logging
@@ -169,7 +170,7 @@ class MainWindow(Ui_MainWindow, QMainWindow):
             file_name = self.filesTable.item(row, 0).text()
             records = self.storage.get_unknown_words_for_file(
                 language, project, file_name)
-        for record in records:
+        for record in reversed(records):
             self.insert_row_to_words_table(record[0], record[1])
 
     def redraw_files_and_dics(self):
@@ -301,7 +302,7 @@ class MainWindow(Ui_MainWindow, QMainWindow):
 
     def language_chosen(self):
         """
-        Redraws the projects combobox for chosen language
+        Redraws the projects combobox for chosen language.
         """
         # Clear the widget
         self.projectsBox.clear()
@@ -328,7 +329,7 @@ class MainWindow(Ui_MainWindow, QMainWindow):
 
     def run_project_clicked(self):
         """
-        Fires up the dialog to manage project analysis
+        Manages project analysis and shows progress dialog.
         """
 
         # Get project and language
@@ -546,6 +547,10 @@ class MainWindow(Ui_MainWindow, QMainWindow):
         return 0
 
     def recalculate_total(self):
+        """
+        Recalculates the total stats for project and puts them into Total line.
+        :return:
+        """
         last_row = self.filesTable.rowCount() - 1
 
         size = 0

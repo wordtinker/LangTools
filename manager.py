@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import logging
 
@@ -27,16 +28,30 @@ class LangManager(Ui_languagesDialog, QDialog):
         self.folderButton.clicked.connect(self.folder_button_clicked)
 
     def initialize(self):
+        """
+        Draws the existing languages into table.
+        :return:
+        """
         languages = self.storage.get_languages()
         for inx, row in enumerate(languages):
             self.add_lang_row(inx, row)
 
     def add_lang_row(self, inx, row):
+        """
+        Adds one row to langTable.
+        :param inx:
+        :param row:
+        :return:
+        """
         self.languagesTable.insertRow(inx)
         self.languagesTable.setItem(inx, 0, QTableWidgetItem(row[0]))
         self.languagesTable.setItem(inx, 1, QTableWidgetItem(row[1]))
 
     def remove_button_clicked(self):
+        """
+        Removes the language from DB and from lang table.
+        :return:
+        """
         # Drop the language from DB
         current_row = self.languagesTable.currentRow()
 
@@ -49,6 +64,11 @@ class LangManager(Ui_languagesDialog, QDialog):
             self.langListHasChanged.emit()
 
     def add_button_clicked(self):
+        """
+        After validation adds new language to DB and table. Creates subfolder
+        inside new language folder.
+        :return:
+        """
         lang = self.langEdit.text()
         folder = self.folderEdit.text()
         logging.info("Going to add new lang folder:" + folder)
@@ -81,6 +101,10 @@ class LangManager(Ui_languagesDialog, QDialog):
             self.langListHasChanged.emit()
 
     def folder_button_clicked(self):
+        """
+        Runs standard select Folder dialog.
+        :return:
+        """
         # Let the user choose folder
         dialog = QFileDialog()
         dialog.setFileMode(QFileDialog.Directory)
@@ -94,6 +118,10 @@ class LangManager(Ui_languagesDialog, QDialog):
             self.folderEdit.setText(dir_name)
 
     def validate_fields(self):
+        """
+        Validates fields for ne language.
+        :return:
+        """
         if not self.folderEdit.text():
             msg_box = QMessageBox()
             msg_box.setText("Name the folder.")

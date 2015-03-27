@@ -4,6 +4,11 @@ from yattag import Doc
 
 
 def __wrap_with_mark(token):
+    """
+    Wrap singe word with tag mark
+    :param token:
+    :return:
+    """
     token_text = token[0]
     description = token[1]
     if description["type"] == "word":
@@ -16,6 +21,11 @@ def __wrap_with_mark(token):
 
 
 def print_page(name, lexi_text):
+    """
+    :param name: title of the HTML page
+    :param lexi_text: text with marked words
+    :return: HTML page
+    """
     # Prepare text
     lexi_text = "".join([__wrap_with_mark(token)
                          for token in lexi_text])

@@ -1,5 +1,6 @@
+# -*- coding: utf-8 -*-
 appname = "LangTools"
-appversion = "0.8.14"
+appversion = "0.8.15"
 dbname = "lt.db"
 log = "lt.log"
 

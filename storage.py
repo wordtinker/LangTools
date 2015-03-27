@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import sqlite3
 
 
@@ -29,12 +30,23 @@ class Storage():
         self.to_update = []
 
     def add_language(self, lang, folder):
+        """
+        Adds new language and it's folder to DB.
+        :param lang:
+        :param folder:
+        :return:
+        """
         db_cursor = self.db_conn.cursor()
         db_cursor.execute('''INSERT INTO Languages
          VALUES (?, ?)''', (lang, folder))
         self.db_conn.commit()
 
     def batch_update_stats(self):
+        """
+        Applies the changes and updates the stats for projects given
+        before.
+        :return:
+        """
         db_cursor = self.db_conn.cursor()
         db_cursor.executemany('''INSERT INTO Files
             VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
@@ -51,6 +63,18 @@ class Storage():
 
     def update_stat(self, rowid, language, project, file, text_size,
                     known, maybe):
+        """
+        Updates the stats for the given project. Delayed insert is used.
+        Batch_update_stats must be called afterward to apply changes.
+        :param rowid:
+        :param language:
+        :param project:
+        :param file:
+        :param text_size:
+        :param known:
+        :param maybe:
+        :return:
+        """
         pknown = 0.0
         pmaybe = 0.0
         unknown = text_size - known - maybe
@@ -62,12 +86,17 @@ class Storage():
 
         if rowid == 0:  # Create new stats row
             self.to_insert.append((file, language, project, text_size, known,
-                               pknown, maybe, pmaybe, unknown, punknown))
+                                   pknown, maybe, pmaybe, unknown, punknown))
         else:  # We have a valid rowid
             self.to_update.append((text_size, known, pknown, maybe, pmaybe,
                                    unknown, punknown, rowid))
 
     def batch_update_words(self):
+        """
+        Applies the changes and updates the word lists for projects given
+        before.
+        :return:
+        """
         # Clear old unknown words data
         db_cursor = self.db_conn.cursor()
         db_cursor.executemany('''DELETE FROM Words
@@ -82,6 +111,15 @@ class Storage():
         self.new_words = []
 
     def update_words(self, language, project, file, dic_unknown):
+        """
+        Updates the word list for the given project. Delayed insert is used.
+        Batch_update_words must be called afterward to apply changes.
+        :param language:
+        :param project:
+        :param file:
+        :param dic_unknown:
+        :return:
+        """
         # Save data that should be deleted in memory
         self.words.append((language, project, file))
 
@@ -91,6 +129,11 @@ class Storage():
         self.new_words += records
 
     def language_exists(self, lang):
+        """
+        Checks if the language is used in Table Languages.
+        :param lang:
+        :return:
+        """
         db_cursor = self.db_conn.cursor()
         db_cursor.execute("""SELECT lang FROM Languages
          WHERE lang=?""", (lang, ))
@@ -100,6 +143,11 @@ class Storage():
             return False
 
     def folder_exists(self, folder):
+        """
+        Checks if the folder is used in Table Languages.
+        :param folder:
+        :return:
+        """
         db_cursor = self.db_conn.cursor()
         db_cursor.execute("""SELECT lang FROM Languages
          WHERE directory=?""", (folder, ))
@@ -109,6 +157,17 @@ class Storage():
             return False
 
     def stat_changed(self, language, project, name, size, known, maybe):
+        """
+        Checks if the statistics of the given file has changed.
+        :param language:
+        :param project:
+        :param name:
+        :param size:
+        :param known:
+        :param maybe:
+        :return: -1 if it's unchanged, 0 if there is no record in DB for given
+        file, rowid - if there is the record and stats has changed.
+        """
         db_cursor = self.db_conn.cursor()
         db_cursor.execute("""SELECT rowid, size, known, maybe FROM Files WHERE
          lang=? AND project=? AND name=?""", (language, project, name))
@@ -124,7 +183,7 @@ class Storage():
 
     def get_languages(self):
         """
-        Provides list of pairs [language, project]
+        Provides list of pairs [language, project].
         """
         db_cursor = self.db_conn.cursor()
         db_cursor.execute("""SELECT lang, directory FROM Languages""")
@@ -132,7 +191,7 @@ class Storage():
 
     def get_projects(self, language):
         """
-        Return projects for chosen language
+        Return projects for chosen language.
         """
         db_cursor = self.db_conn.cursor()
         db_cursor.execute("""SELECT project FROM Files
@@ -143,7 +202,7 @@ class Storage():
     def get_unknown_words(self, language, project):
         """
         Provides the list of unknown words and theirs quantities for given
-        language and project
+        language and project.
         :param language:
         :param project:
         """
@@ -151,13 +210,14 @@ class Storage():
         db_cursor.execute("""SELECT word, SUM(quantity) as sum FROM Words
         WHERE lang=? AND project=?
         GROUP BY word
-        ORDER BY sum ASC""", (language, project))
+        ORDER BY sum DESC
+        LIMIT 100""", (language, project))
         return db_cursor.fetchall()
 
     def get_unknown_words_for_file(self, language, project, file):
         """
         Provides the list of unknown words and theirs quantities for given
-        language, project and file
+        language, project and file.
         :param language:
         :param project:
         :param file
@@ -171,7 +231,7 @@ class Storage():
     def get_files_stats(self, language, project):
         """
         Provides the list of files and corresponding stats for given
-        language and project
+        language and project.
         :param language:
         :param project:
         :return:
@@ -184,12 +244,25 @@ class Storage():
         return db_cursor.fetchall()
 
     def get_total_stats(self, language, project):
+        """
+        Provides the total and maybe stat of the project.
+        :param language:
+        :param project:
+        :return:
+        """
         db_cursor = self.db_conn.cursor()
         db_cursor.execute("""SELECT SUM(known), SUM(maybe) FROM Files
          WHERE lang=? AND project=?""", (language, project))
         return db_cursor.fetchone()
 
     def remove_file(self, name, language, project):
+        """
+        Removes the stats of the given file from the DB.
+        :param name:
+        :param language:
+        :param project:
+        :return:
+        """
         db_cursor = self.db_conn.cursor()
         db_cursor.execute("""DELETE FROM Files WHERE
         name=? AND lang=? AND project=?""", (name, language, project))
@@ -200,6 +273,11 @@ class Storage():
         self.db_conn.commit()
 
     def remove_language(self, language):
+        """
+        Removes the stats of the given language from DB.
+        :param language:
+        :return:
+        """
         db_cursor = self.db_conn.cursor()
         db_cursor.execute("""DELETE FROM Languages
         WHERE lang=?""", (language, ))
@@ -214,6 +292,12 @@ class Storage():
         self.db_conn.commit()
 
     def remove_project(self, lang, project):
+        """
+        Removes the stats of the given project from DB.
+        :param lang:
+        :param project:
+        :return:
+        """
         db_cursor = self.db_conn.cursor()
         db_cursor.execute("""DELETE FROM Files
         WHERE lang=? AND project=?""", (lang, project))

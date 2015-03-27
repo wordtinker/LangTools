@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+cx_freeze setup script
+run 'python setup.py build' to use
+"""
+
+
 import sys
 from cx_Freeze import setup, Executable
 
