@@ -12,7 +12,8 @@ from lang.lexer import Lexer
 import lang.printer as printer
 from baseTableModel import BaseTaBleModel
 
-from PyQt5.QtCore import Qt, pyqtSignal, QFileSystemWatcher, QUrl, QFile, QVariant
+from PyQt5.QtCore import Qt, pyqtSignal, QFileSystemWatcher, QUrl, QFile,\
+    QVariant, QSortFilterProxyModel
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import QApplication, QAbstractItemView,\
     QMainWindow, QProgressDialog, QMessageBox, QHeaderView
@@ -148,12 +149,18 @@ class MainWindow(Ui_MainWindow, QMainWindow):
         self.dicsTable.setSelectionMode(QAbstractItemView.SingleSelection)
 
         self.words_model = BaseTaBleModel(["Word", "Quantity"])
-        self.wordsTable.setModel(self.words_model)
+        self.words_proxy = QSortFilterProxyModel()
+        self.words_proxy.setSourceModel(self.words_model)
+        self.wordsTable.setModel(self.words_proxy)
+        self.wordsTable.setSortingEnabled(True)
         self.wordsTable.horizontalHeader()\
             .setSectionResizeMode(0, QHeaderView.Stretch)
 
         self.files_model = FilesModel()
-        self.filesTable.setModel(self.files_model)
+        self.files_proxy = QSortFilterProxyModel()
+        self.files_proxy.setSourceModel(self.files_model)
+        self.filesTable.setModel(self.files_proxy)
+        self.filesTable.setSortingEnabled(True)
         self.filesTable.setSelectionMode(QAbstractItemView.SingleSelection)
         self.filesTable.horizontalHeader()\
             .setSectionResizeMode(0, QHeaderView.ResizeToContents)
