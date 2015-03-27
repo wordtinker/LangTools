@@ -225,7 +225,7 @@ class Storage():
         db_cursor = self.db_conn.cursor()
         db_cursor.execute("""SELECT word, quantity FROM Words
         WHERE lang=? AND project=? AND file=?
-        ORDER BY quantity ASC""", (language, project, file))
+        ORDER BY quantity DESC""", (language, project, file))
         return db_cursor.fetchall()
 
     def get_files_stats(self, language, project):

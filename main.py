@@ -65,7 +65,7 @@ class MainWindow(Ui_MainWindow, QMainWindow):
 
     projectIsReady = pyqtSignal()  # A signal showing that analyze is finished
 
-    def __init__(self, watcher, storage):
+    def __init__(self, watcher, dic_watcher, storage):
         super(MainWindow, self).__init__()
         # Set up the user interface from Designer.
         self.setupUi(self)
@@ -88,17 +88,20 @@ class MainWindow(Ui_MainWindow, QMainWindow):
 
         # Create internal variables
         self.watcher = watcher
+        self.dic_watcher = dic_watcher
         self.storage = storage
         self.langs = {}
 
         # Set signals and slots
         self.languagesBox.currentIndexChanged.connect(self.language_chosen)
         self.languagesBox.activated.connect(self.language_chosen)
-        self.projectsBox.currentIndexChanged.connect(self.redraw_files_and_dics)
+        self.projectsBox.currentIndexChanged.connect(self.redraw_files)
+        self.projectsBox.currentIndexChanged.connect(self.redraw_dics)
         self.projectsBox.currentIndexChanged.connect(self.redraw_word_list)
         self.filesTable.currentCellChanged.connect(self.redraw_word_list)
-        self.watcher.directoryChanged.connect(self.redraw_files_and_dics)
-        self.projectIsReady.connect(self.redraw_files_and_dics)
+        self.watcher.directoryChanged.connect(self.redraw_files)
+        self.dic_watcher.directoryChanged.connect(self.redraw_dics)
+        self.projectIsReady.connect(self.redraw_files)
         self.projectIsReady.connect(self.redraw_word_list)
 
         self.actionManage.triggered.connect(self.manage_action_triggered)
@@ -173,13 +176,12 @@ class MainWindow(Ui_MainWindow, QMainWindow):
         for record in reversed(records):
             self.insert_row_to_words_table(record[0], record[1])
 
-    def redraw_files_and_dics(self):
+    def redraw_dics(self):
         """
-        Redraws list of files for chosen project
+        Redraws list of dictionaries used in project.
+        :return:
         """
-        self.prepare_files_table()
         self.prepare_dics_table()
-
         # Get project and output dirs
         project = self.projectsBox.currentText()
         language = self.languagesBox.currentText()
@@ -189,23 +191,16 @@ class MainWindow(Ui_MainWindow, QMainWindow):
             return
 
         folder = self.langs[language]
-        project_dir = os.path.join(
-            folder, config.corpus_dir, project)
-        logging.info("project_dir:" + project_dir)
-        output_dir = os.path.join(
-            folder, config.output_dir, project)
-        logging.info("output_dir:" + output_dir)
-        dic_dir = os.path.join(
-            folder, config.dic_dir, project)
+
+        dic_dir = os.path.join(folder, config.dic_dir, project)
         logging.info("dic_dir:" + dic_dir)
         general_dics = os.path.join(folder, config.dic_dir)
         logging.info("general_dics:" + general_dics)
 
-        # Allow watcher to watch new directories
-        self.watcher.set_dirs([project_dir, output_dir, dic_dir, general_dics])
+        # Allow watcher to watch for new dictionaries
+        self.dic_watcher.set_dirs([dic_dir, general_dics])
 
         # Add every file from dic and general dic dir
-
         dictionaries = set(list_dir(dic_dir, config.dic))
         gen_dictionaries = set(list_dir(general_dics, config.dic))
 
@@ -216,6 +211,29 @@ class MainWindow(Ui_MainWindow, QMainWindow):
         for file in gen_dictionaries:
             self.insert_row_to_dics_table(file, "General")
             logging.info("Draw dic file:" + file)
+
+    def redraw_files(self):
+        """
+        Redraws list of files for chosen project.
+        """
+        self.prepare_files_table()
+
+        # Get project and output dirs
+        project = self.projectsBox.currentText()
+        language = self.languagesBox.currentText()
+        # Make sure that we are not trying to draw empty projects and lang
+        # when projects and languages are deleted
+        if not(project and language):
+            return
+
+        folder = self.langs[language]
+        project_dir = os.path.join(folder, config.corpus_dir, project)
+        logging.info("project_dir:" + project_dir)
+        output_dir = os.path.join(folder, config.output_dir, project)
+        logging.info("output_dir:" + output_dir)
+
+        # Allow watcher to watch new directories
+        self.watcher.set_dirs([project_dir, output_dir])
 
         # Add every file from project dir and output dir to table
         files = set(list_dir(project_dir, config.input))
@@ -473,11 +491,13 @@ class MainWindow(Ui_MainWindow, QMainWindow):
                     self.storage.update_words(
                         language, project, file, dic_unknown)
 
-                    # Save marked text to output dir
+                # Save marked text to output dir
+                base, ext = os.path.splitext(file)
+                out_path =\
+                    os.path.join(output_dir, base + config.input[ext])
+
+                if not os.path.exists(out_path) or rowid != -1:
                     html_page = printer.print_page(file, lexi_text)
-                    base, ext = os.path.splitext(file)
-                    out_path =\
-                        os.path.join(output_dir, base + config.input[ext])
                     logging.info("Writing output to:" + out_path)
                     try:
                         with open(out_path, 'w', encoding='utf-8') as a_file:
@@ -671,8 +691,9 @@ if __name__ == '__main__':
         app = QApplication(sys.argv)
 
         watcher = Watcher()
+        dic_watcher = Watcher()
         storage = storage.Storage(os.path.join(app_data_path, config.dbname))
-        form = MainWindow(watcher, storage)
+        form = MainWindow(watcher, dic_watcher, storage)
 
         form.show()
 
