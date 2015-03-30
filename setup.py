@@ -2,6 +2,8 @@
 """
 cx_freeze setup script
 run 'python setup.py build' to use
+add libEGL.dll
+add empty lt.log and lt.db
 """
 
 
