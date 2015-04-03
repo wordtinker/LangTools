@@ -1,1 +1,1 @@
-{"prefix": [], "pattern": {"0": [["$", ["s", "'", "'s", "es", "ed", "ing"]], ["y$", ["ies", "ied"]], ["e$", ["ed", "ing"]]]}}
+{"pattern": {"0": [["$", ["s", "'", "'s", "es", "ed", "ing"]], ["y$", ["ies", "ied"]], ["e$", ["ed", "ing"]]]}, "prefix": []}
