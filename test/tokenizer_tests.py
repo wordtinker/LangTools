@@ -1,8 +1,5 @@
 import unittest
-import json
-import os
 from lang import tokenizer
-from lang.lexer import Lexer
 
 
 class TokenizerTests(unittest.TestCase):
@@ -81,19 +78,3 @@ class TokenizerTests(unittest.TestCase):
         result = [w for w in tknzr]
         self.assertEqual(result, [
             ('צ״ק', {'type': 'word'})])
-
-
-class LexerTests(unittest.TestCase):
-
-    def test_lexer_with_one_word(self):
-        lexer = Lexer()
-        plugin = {}
-        plugin_name = os.path.join(os.getcwd(), 'plugins', 'Hebrew.json')
-        with open(plugin_name, "r") as file:
-            plugin = json.loads(file.read())
-        lexer.load_plugin(plugin)
-        dic = os.path.join(os.getcwd(), 'test', 'words.txt')
-        with open(dic) as d_file:
-            lexer.load_dictionary(d_file)
-        lexer.expand_dic()
-        self.assertIn('שכונת', lexer.dic)
