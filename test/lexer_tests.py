@@ -500,7 +500,7 @@ class EphalTsadiShort(BaseTestCase.EpholReduced):
 class PaalAyinVav(BaseTestCase.Ephol, BaseTestCase.EpholReduced):
 
     def setUp(self):
-        self.checksum = 42
+        self.checksum = 41
         self.word = 'יבוא'
         self.stem = 'בוא'
         super().setUp()
@@ -509,7 +509,7 @@ class PaalAyinVav(BaseTestCase.Ephol, BaseTestCase.EpholReduced):
 class PaalAyinVavMem(BaseTestCase.Ephol):
 
     def setUp(self):
-        self.checksum = 42
+        self.checksum = 41
         self.word = 'יקום'
         self.stem = 'קום'
         super().setUp()
@@ -518,16 +518,16 @@ class PaalAyinVavMem(BaseTestCase.Ephol):
 class PaalAyinVavMemShort(BaseTestCase.EpholReduced):
 
     def setUp(self):
-        self.checksum = 42
+        self.checksum = 41
         self.word = 'יקום'
-        self.stem = 'קןמ'
+        self.stem = 'קומ'
         super().setUp()
 
 
 class PaalAyinVavNun(BaseTestCase.Ephol):
 
     def setUp(self):
-        self.checksum = 42
+        self.checksum = 41
         self.word = 'ירון'
         self.stem = 'רון'
         super().setUp()
@@ -536,7 +536,7 @@ class PaalAyinVavNun(BaseTestCase.Ephol):
 class PaalAyinVavNunShort(BaseTestCase.EpholReduced):
 
     def setUp(self):
-        self.checksum = 42
+        self.checksum = 41
         self.word = 'ירון'
         self.stem = 'רונ'
         super().setUp()
@@ -545,7 +545,7 @@ class PaalAyinVavNunShort(BaseTestCase.EpholReduced):
 class PaalAyinVavKaf(BaseTestCase.Ephol):
 
     def setUp(self):
-        self.checksum = 42
+        self.checksum = 41
         self.word = 'יכוך'  # Synthetic
         self.stem = 'כוך'
         super().setUp()
@@ -554,7 +554,7 @@ class PaalAyinVavKaf(BaseTestCase.Ephol):
 class PaalAyinVavKafShort(BaseTestCase.EpholReduced):
 
     def setUp(self):
-        self.checksum = 42
+        self.checksum = 41
         self.word = 'יכוך'  # Synthetic
         self.stem = 'כוכ'
         super().setUp()
@@ -563,7 +563,7 @@ class PaalAyinVavKafShort(BaseTestCase.EpholReduced):
 class PaalAyinVavPei(BaseTestCase.Ephol):
 
     def setUp(self):
-        self.checksum = 42
+        self.checksum = 41
         self.word = 'יעוף'
         self.stem = 'עוף'
         super().setUp()
@@ -572,7 +572,7 @@ class PaalAyinVavPei(BaseTestCase.Ephol):
 class PaalAyinVavPeiShort(BaseTestCase.EpholReduced):
 
     def setUp(self):
-        self.checksum = 42
+        self.checksum = 41
         self.word = 'יעוף'
         self.stem = 'עופ'
         super().setUp()
@@ -581,7 +581,7 @@ class PaalAyinVavPeiShort(BaseTestCase.EpholReduced):
 class PaalAyinVavTsadi(BaseTestCase.Ephol):
 
     def setUp(self):
-        self.checksum = 42
+        self.checksum = 41
         self.word = 'ירוץ'
         self.stem = 'רוץ'
         super().setUp()
@@ -590,7 +590,7 @@ class PaalAyinVavTsadi(BaseTestCase.Ephol):
 class PaalAyinVavTsadiShort(BaseTestCase.EpholReduced):
 
     def setUp(self):
-        self.checksum = 42
+        self.checksum = 41
         self.word = 'ירוץ'
         self.stem = 'רוצ'
         super().setUp()
@@ -653,7 +653,7 @@ class HifilMem(BaseTestCase.Hifil):
 class HifilNun(BaseTestCase.Hifil):
 
     def setUp(self):
-        self.checksum = 41
+        self.checksum = 42
         self.word = 'הפעין'  # Synthetic
         self.stem = 'הפענ'
         super().setUp()

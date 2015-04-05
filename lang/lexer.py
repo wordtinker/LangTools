@@ -86,11 +86,29 @@ class Lexer:
             self.prefixes = plugin["prefix"]
 
     def expand_dic(self):
-        # Expand for every layer of tranfsormations
-        for level in sorted(self.patterns.keys()):
-            keys = list(self.dic.keys())
+        last_level = len(self.patterns) - 1
+        before_state = set()
+        for i, level in enumerate(sorted(self.patterns.keys())):
+            after_state = set()
+            if i == 0:
+                # On the lowest level copy initial list from Dictionary
+                keys = self.dic.keys()
+            else:
+                # On subsequent calls copy from previous level
+                keys = before_state
+
             for word in keys:
+                # Transform the word into new form
                 for p, sub in self.patterns[level]:
-                    new_word = p.sub(sub, word)
-                    if word != new_word:
-                        self.__put_to_dic(new_word, "expanded")
+                    if p.search(word):
+                        # Add the word only if it could be transformed
+                        new_word = p.sub(sub, word)
+                        after_state.add(new_word)
+
+            if i == last_level:
+                # Copy the final state to Dictionary
+                for word in after_state:
+                    self.__put_to_dic(word, "expanded")
+            else:
+                # Push it to the next level
+                before_state = after_state
