@@ -283,3 +283,11 @@ class TestVeSheKsheHa(Test.PrefixTest):
         self.origin = 'כלב'
         self.exp = 'שכשהכלב'
         super().setUp()
+
+
+class TestVeSheLe(Test.PrefixTest):
+
+    def setUp(self):
+        self.origin = 'כל'
+        self.exp = 'שלכל'
+        super().setUp()
