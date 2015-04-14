@@ -228,19 +228,32 @@ class Storage():
         ORDER BY quantity DESC""", (language, project, file))
         return db_cursor.fetchall()
 
-    def get_files_stats(self, language, project):
+    def get_files_stats(self, language, project, filter_value):
         """
         Provides the list of files and corresponding stats for given
-        language and project.
+        language and project. The list contains files that contain
+        filtered_value.
         :param language:
         :param project:
         :return:
         """
         db_cursor = self.db_conn.cursor()
-        db_cursor.execute("""SELECT name, size, known, pknown, maybe, pmaybe,
-         unknown, punknown FROM Files WHERE
-         lang=? AND project=?
-         ORDER BY punknown DESC""", (language, project))
+        if filter_value:
+            db_cursor.execute("""SELECT F.name, F.size, F.known, F.pknown,
+             F.maybe, F.pmaybe, F.unknown, F.punknown
+             FROM (SELECT * from Files WHERE lang=:lang AND project=:prj) F
+             INNER JOIN (SELECT * FROM Words WHERE lang=:lang
+             AND project=:prj AND word LIKE :like) W
+             ON F.name = W.file
+             GROUP BY F.name
+             ORDER BY F.punknown DESC""", {'lang': language,
+                                           'prj': project,
+                                           'like': filter_value})
+        else:
+            db_cursor.execute("""SELECT name, size, known, pknown, maybe, pmaybe,
+             unknown, punknown FROM Files WHERE
+             lang=? AND project=?
+             ORDER BY punknown DESC""", (language, project))
         return db_cursor.fetchall()
 
     def get_total_stats(self, language, project):

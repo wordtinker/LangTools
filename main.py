@@ -200,6 +200,7 @@ class MainWindow(Ui_MainWindow, QMainWindow):
         self.dic_watcher.directoryChanged.connect(self.redraw_dics)
         self.projectIsReady.connect(self.redraw_files)
         self.projectIsReady.connect(self.redraw_word_list)
+        self.filter.returnPressed.connect(self.redraw_files)
 
         self.actionManage.triggered.connect(self.manage_action_triggered)
         self.actionExit.triggered.connect(self.exit_action_triggered)
@@ -339,7 +340,9 @@ class MainWindow(Ui_MainWindow, QMainWindow):
             file_ext = config.output[extension]
             cleared_outputs.add(base + file_ext)
 
-        records = self.storage.get_files_stats(language, project)
+        filtered = self.filter.text()
+
+        records = self.storage.get_files_stats(language, project, filtered)
         to_drop = []
         for record in records:
             file, *stats = record
@@ -360,18 +363,20 @@ class MainWindow(Ui_MainWindow, QMainWindow):
             else:
                 to_drop.append(file)
 
-        for file in files:
-            logging.info("Draw file from dir:" + file)
-            in_output = file in cleared_outputs
-            if in_output:
-                self.files_model.add_row(file)
-                cleared_outputs.remove(file)
-            else:
-                self.files_model.add_row(file)
+        # Add files w/o stats but only if not in filtering mode.
+        if not filtered:
+            for file in files:
+                logging.info("Draw file from dir:" + file)
+                in_output = file in cleared_outputs
+                if in_output:
+                    self.files_model.add_row(file)
+                    cleared_outputs.remove(file)
+                else:
+                    self.files_model.add_row(file)
 
-        for file in cleared_outputs:
-            logging.info("Draw file from output:" + file)
-            self.files_model.add_row(file)
+            for file in cleared_outputs:
+                logging.info("Draw file from output:" + file)
+                self.files_model.add_row(file)
 
         self.files_model.recalculate_total()
 
