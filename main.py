@@ -554,7 +554,7 @@ class MainWindow(Ui_MainWindow, QMainWindow):
                 logging.exception(e)
                 pass
 
-            if text_size is not None:  # Analysis was sucessful
+            if text_size is not None:  # Analysis was successful
                 rowid = self.storage.stat_changed(
                         language, project, file, text_size, known, maybe)
 

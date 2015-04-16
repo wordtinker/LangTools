@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import regex
+from collections import defaultdict
 from lang.tokenizer import Tokenizer
 
 
@@ -12,20 +13,14 @@ class Lexer:
         self.dic = {}
 
         # Current text counters
-        self.c_dic_unknown = {}
-        self.c_known = 0
-        self.c_text_size = 0
-        self.c_might_know = 0
+        self.c_dic_unknown = defaultdict(int)
+        self.c_known = defaultdict(int)
+        self.c_text_size = defaultdict(int)
+        self.c_might_know = defaultdict(int)
 
     def __put_to_dic(self, word, source):
         if word not in self.dic:
             self.dic[word] = source
-
-    def __update_dic(self, word):
-        if word not in self.c_dic_unknown:
-            self.c_dic_unknown[word] = 1
-        else:
-            self.c_dic_unknown[word] += 1
 
     def __is_expandable(self, token_word):
         for prefix in self.prefixes:
@@ -39,34 +34,34 @@ class Lexer:
         word, description = token
         word = word.lower()
         if description["type"] == "word":
-            self.c_text_size += 1
+            self.c_text_size[word] += 1
             if word in self.dic:
                 if self.dic[word] == "original":
-                    self.c_known += 1
+                    self.c_known[word] += 1
                     description["class"] = "known"
                 else:
-                    self.c_might_know += 1
+                    self.c_might_know[word] += 1
                     description["class"] = "maybe"
             elif self.__is_expandable(word):
-                self.c_might_know += 1
+                self.c_might_know[word] += 1
                 description["class"] = "maybe"
             else:
                 description["class"] = "unknown"
-                self.__update_dic(word)
+                self.c_dic_unknown[word] += 1
         return token
 
     def analyze(self, content):
         content = content.read()
         tokens = Tokenizer(content)
         # Reset Current text counters.
-        self.c_dic_unknown = {}
-        self.c_known = 0
-        self.c_text_size = 0
-        self.c_might_know = 0
+        self.c_dic_unknown.clear()
+        self.c_known.clear()
+        self.c_text_size.clear()
+        self.c_might_know.clear()
 
         new_tokens = [self.__analyze_token(token) for token in tokens]
         return new_tokens, self.c_dic_unknown,\
-            self.c_text_size, self.c_known, self.c_might_know
+            len(self.c_text_size), len(self.c_known), len(self.c_might_know)
 
     def load_dictionary(self, content):
         content = content.read().lower()
