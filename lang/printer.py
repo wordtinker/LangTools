@@ -3,31 +3,28 @@
 from yattag import Doc
 
 
-def __wrap_with_mark(token):
+def _wrap_with_mark(token):
     """
     Wrap singe word with tag mark
     :param token:
     :return:
     """
-    token_text = token[0]
-    description = token[1]
+    token_text, description = token
     if description["type"] == "word":
-        if description["class"] == "known":
-            token_text = "<mark class=known>" + token_text + "</mark>"
-        elif description["class"] == "maybe":
-            token_text = "<mark>" + token_text + "</mark>"
+        token_text = "<span class=" + description['class'] + ">" +\
+                     token_text + "</span>"
 
     return token_text
 
 
-def print_page(name, lexi_text):
+def print_page(name, lexi_text, style=""):
     """
     :param name: title of the HTML page
     :param lexi_text: text with marked words
     :return: HTML page
     """
     # Prepare text
-    lexi_text = "".join([__wrap_with_mark(token)
+    lexi_text = "".join([_wrap_with_mark(token)
                          for token in lexi_text])
 
     # Convert text to html
@@ -43,16 +40,20 @@ def print_page(name, lexi_text):
                 for line in lines:
                     with tag('p'):
                         doc.asis(line)
-            with tag('style'):
-                text('body {font-family:sans-serif; \
-                     line-height: 1.5;}')
-                text('mark.known \
-                     {background-color: white; \
-                     font-weight: normal;font-style: normal; \
-                     border-bottom: 3px solid green;}')
-                text('mark \
-                     {background-color: white; \
-                     font-weight: normal;font-style: normal; \
-                     border-bottom: 3px solid yellowgreen;}')
+            if style:  # Use user defined style
+                with tag('style'):
+                    text(style)
+            else:  # Use default style
+                with tag('style'):
+                    text('body {font-family:sans-serif; \
+                         line-height: 1.5;}')
+                    text('span.known \
+                         {background-color: white; \
+                         font-weight: normal;font-style: normal; \
+                         border-bottom: 3px solid green;}')
+                    text('span.maybe \
+                         {background-color: white; \
+                         font-weight: normal;font-style: normal; \
+                         border-bottom: 3px solid yellowgreen;}')
 
     return doc.getvalue()

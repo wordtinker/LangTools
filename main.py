@@ -43,6 +43,36 @@ def list_dir(dir_name, ext_list):
     return dir_list
 
 
+def fetch_plugin(lang):
+    plugin = {}
+    plugin_name = os.path.join(os.getcwd(), "plugins", lang + ".json")
+    logging.info("Analyze with plugin_name:" + plugin_name)
+
+    try:
+        with open(plugin_name, "r") as file:
+            plugin = json.loads(file.read())
+    except Exception as e:
+        logging.exception(e)
+        pass
+
+    return plugin
+
+
+def fetch_css_file(lang):
+    css = ""
+    css_file_name = os.path.join(os.getcwd(), "plugins", lang + ".css")
+    logging.info("Print with css file:" + css_file_name)
+
+    try:
+        with open(css_file_name, "r") as file:
+            css = file.read()
+    except Exception as e:
+        logging.exception(e)
+        pass
+
+    return css
+
+
 class Watcher(QFileSystemWatcher):
 
     def __init__(self):
@@ -475,19 +505,8 @@ class MainWindow(Ui_MainWindow, QMainWindow):
         self.menuBar.setEnabled(False)
         progress.setValue(0)
 
-        # See if we have plugin for language
-        plugin_name = os.path.join(
-            os.getcwd(), config.plugin["folder"],
-            language + config.plugin["ext"])
-        logging.info("Analyze with plugin_name:" + plugin_name)
-
-        plugin = {}
-        try:
-            with open(plugin_name, "r") as file:
-                plugin = json.loads(file.read())
-        except Exception as e:
-            logging.exception(e)
-            pass
+        # Load plugin into lexer if we have plugin
+        plugin = fetch_plugin(language)
         lexer.load_plugin(plugin)
 
         # Update progressbar
@@ -570,7 +589,8 @@ class MainWindow(Ui_MainWindow, QMainWindow):
                     os.path.join(output_dir, base + config.input[ext])
 
                 if not os.path.exists(out_path) or rowid != -1:
-                    html_page = printer.print_page(file, lexi_text)
+                    css = fetch_css_file(language)
+                    html_page = printer.print_page(file, lexi_text, style=css)
                     logging.info("Writing output to:" + out_path)
                     try:
                         with open(out_path, 'w', encoding='utf-8') as a_file:

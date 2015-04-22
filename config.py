@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 appname = "LangTools"
-appversion = "0.9.8"
+appversion = "0.9.9"
 dbname = "lt.db"
 log = "lt.log"
 
@@ -18,9 +18,4 @@ output = {
 
 dic = {
     ".txt"
-}
-
-plugin = {
-    "folder": "plugins",
-    "ext": ".json"
 }
