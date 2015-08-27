@@ -248,6 +248,21 @@ class TsadiWord(BaseTestCase.Noun):
         self.assertNotIn(self.stem, self.lexer.dic)
 
 
+class IIHeyWord(BaseTestCase.Word):
+
+    def setUp(self):
+        self.checksum = 51
+        self.word = 'עוגייה'
+        self.stem = 'עוגי'
+        super().setUp()
+
+    def test_unmodified(self):
+        self.assertNotIn(self.stem, self.lexer.dic)
+
+    def test_plural(self):
+        self.assertIn(self.stem + "ות", self.lexer.dic)
+
+
 class HeyWord(BaseTestCase.Noun):
 
     def setUp(self):
