@@ -263,6 +263,21 @@ class IIHeyWord(BaseTestCase.Word):
         self.assertIn(self.stem + "ות", self.lexer.dic)
 
 
+class OtWord(BaseTestCase.Word):
+
+    def setUp(self):
+        self.checksum = 38
+        self.word = 'התעטשות'
+        self.stem = 'התעטשו'
+        super().setUp()
+
+    def test_unmodified(self):
+        self.assertNotIn(self.stem, self.lexer.dic)
+
+    def test_plural(self):
+        self.assertIn(self.stem + "יות", self.lexer.dic)
+
+
 class HeyWord(BaseTestCase.Noun):
 
     def setUp(self):
