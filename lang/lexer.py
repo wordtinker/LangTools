@@ -14,9 +14,9 @@ class Lexer:
 
         # Current text counters
         self.c_dic_unknown = defaultdict(int)
-        self.c_known = defaultdict(int)
-        self.c_text_size = defaultdict(int)
-        self.c_might_know = defaultdict(int)
+        self.c_known = 0
+        self.c_text_size = 0
+        self.c_might_know = 0
 
     def __put_to_dic(self, word, source):
         if word not in self.dic:
@@ -34,16 +34,16 @@ class Lexer:
         word, description = token
         word = word.lower()
         if description["type"] == "word":
-            self.c_text_size[word] += 1
+            self.c_text_size += 1
             if word in self.dic:
                 if self.dic[word] == "original":
-                    self.c_known[word] += 1
+                    self.c_known += 1
                     description["class"] = "known"
                 else:
-                    self.c_might_know[word] += 1
+                    self.c_might_know += 1
                     description["class"] = "maybe"
             elif self.__is_expandable(word):
-                self.c_might_know[word] += 1
+                self.c_might_know += 1
                 description["class"] = "maybe"
             else:
                 description["class"] = "unknown"
@@ -55,13 +55,13 @@ class Lexer:
         tokens = Tokenizer(content)
         # Reset Current text counters.
         self.c_dic_unknown.clear()
-        self.c_known.clear()
-        self.c_text_size.clear()
-        self.c_might_know.clear()
+        self.c_known = 0
+        self.c_text_size = 0
+        self.c_might_know = 0
 
         new_tokens = [self.__analyze_token(token) for token in tokens]
         return new_tokens, self.c_dic_unknown,\
-            len(self.c_text_size), len(self.c_known), len(self.c_might_know)
+            self.c_text_size, self.c_known, self.c_might_know
 
     def load_dictionary(self, content):
         content = content.read().lower()
