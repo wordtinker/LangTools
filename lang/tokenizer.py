@@ -11,7 +11,7 @@ class Tokenizer:
 
     def __iter__(self):
         # Calculating string bounds
-        self.pos = 0
+        position = 0
         self.length = len(self.string)
         self.word = regex.compile(
             r"""(
@@ -20,23 +20,15 @@ class Tokenizer:
             \p{L}+   # any character of: UTF macro 'Letter' 1 or more times
             )?       # optionally
             )""", regex.VERBOSE)
-        return self
-
-    def __next__(self):
-        if self.pos >= self.length:  # Reached the end of string
-            raise StopIteration
-        else:
-            match = self.word.search(self.string, self.pos)
+        while position < self.length:
+            match = self.word.search(self.string, position)
             if not match:  # No words left, will return some trailing characters
-                old_start = self.pos
-                self.pos = self.length
-                return self.string[old_start:], {"type": "non_word"}
-            start = match.start()
-            end = match.end()
-            if self.pos != start:  # Some non-letters are left before word
-                old_start = self.pos
-                self.pos = start
-                return self.string[old_start:start], {"type": "non_word"}
+                yield self.string[position:], {"type": "non_word"}
+                position = self.length
             else:
-                self.pos = end
-                return self.string[start:end], {"type": "word"}
+                start = match.start()
+                end = match.end()
+                if position != start:  # Some non-letters are left before word
+                    yield self.string[position:start], {"type": "non_word"}
+                yield self.string[start:end], {"type": "word"}
+                position = end
