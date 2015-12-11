@@ -82,28 +82,18 @@ class Lexer:
 
     def expand_dic(self):
         last_level = len(self.patterns) - 1
-        before_state = set()
+        before_state = set(self.dic.keys())
         for i, level in enumerate(sorted(self.patterns.keys())):
             after_state = set()
-            if i == 0:
-                # On the lowest level copy initial list from Dictionary
-                keys = self.dic.keys()
-            else:
-                # On subsequent calls copy from previous level
-                keys = before_state
-
-            for word in keys:
+            for word in before_state:
                 # Transform the word into new form
                 for p, sub in self.patterns[level]:
                     if p.search(word):
                         # Add the word only if it could be transformed
                         new_word = p.sub(sub, word)
                         after_state.add(new_word)
-
-            if i == last_level:
-                # Copy the final state to Dictionary
-                for word in after_state:
-                    self.__put_to_dic(word, "expanded")
-            else:
-                # Push it to the next level
-                before_state = after_state
+            # Push it to the next level
+            before_state = after_state
+        # Copy the final state to Dictionary
+        for word in before_state:
+            self.__put_to_dic(word, "expanded")
