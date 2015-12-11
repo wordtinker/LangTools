@@ -81,7 +81,6 @@ class Lexer:
             self.prefixes = plugin["prefix"]
 
     def expand_dic(self):
-        last_level = len(self.patterns) - 1
         before_state = set(self.dic.keys())
         for i, level in enumerate(sorted(self.patterns.keys())):
             after_state = set()
