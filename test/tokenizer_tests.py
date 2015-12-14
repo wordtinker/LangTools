@@ -78,3 +78,13 @@ class TokenizerTests(unittest.TestCase):
         result = [w for w in tknzr]
         self.assertEqual(result, [
             ('צ״ק', {'type': 'word'})])
+
+    def test_two_words_and_rn(self):
+        content = "אבא אבא!\r\n"
+        tknzr = tokenizer.Tokenizer(content)
+        result = [w for w in tknzr]
+        self.assertEqual(result, [
+            ('אבא', {'type': 'word'}),
+            (' ', {'type': 'non_word'}),
+            ('אבא', {'type': 'word'}),
+            ('!\r\n', {'type': 'non_word'})])
